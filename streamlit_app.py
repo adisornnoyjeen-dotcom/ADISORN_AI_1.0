@@ -25,11 +25,11 @@ if user_input := st.chat_input("พิมพ์ข้อความคุยก
 
     with st.chat_message("assistant"):
         with st.spinner("กำลังคิด..."):
-            try:
-                completion = client.chat.completions.create(
-                    model="",
-                    messages=[{"role": m["role"], "content": m["content"]} for m in st.session_state.messages]
-                )model="llama-3.1-8b-instant",
+          try:
+            completion = client.chat.completions.create(
+                model="llama-3.1-8b-instant",
+                messages=[{"role": m["role"], "content": m["content"]} for m in st.session_state.messages]
+            )
                 response_text = completion.choices[0].message.content
                 st.markdown(response_text)
                 st.session_state.messages.append({"role": "assistant", "content": response_text})
