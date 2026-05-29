@@ -25,17 +25,19 @@ if user_input := st.chat_input("พิมพ์ข้อความคุยก
     with st.chat_message("assistant"):
         with st.spinner("กำลังคิด..."):
             try:
-                # ตั้งค่าระบบกำกับบอทไม่ให้หลอนข้อมูลชีววิทยา
+                # อัปเกรดคำสั่ง: สั่งห้ามมีภาษาอื่นหลุดมาเด็ดขาด
                 system_message = {
                     "role": "system", 
-                    "content": "คุณคือผู้เชี่ยวชาญวิชาชีววิทยาและการแพทย์ระดับสูง ตอบคำถามอิงตามหลักการทางวิทยาศาสตร์และข้อเท็จจริงที่ได้รับการพิสูจน์แล้วเท่านั้น หากไม่มีข้อมูลหรือไม่มั่นใจ ให้ปฏิเสธการตอบตรงๆ อย่างสุภาพ ห้ามเดา ห้ามคิดข้อมูลขึ้นมาเอง และห้ามแปลภาษาเพี้ยนเด็ดขาด"
+                    "content": "คุณคือผู้เชี่ยวชาญวิชาชีววิทยาและการแพทย์ระดับสูง ต้องตอบเป็นภาษาไทยที่ถูกต้อง สละสลวย และเป็นธรรมชาติ 100% เท่านั้น ห้ามมีภาษาอื่น เช่น ภาษาจีน ภาษารัสเซีย หรือตัวอักษรต่างดาวปนมาในเนื้อหาเด็ดขาด (ยกเว้นคำศัพท์เทคนิคภาษาอังกฤษในวงเล็บ) หากไม่มีข้อมูลหรือไม่มั่นใจ ให้ปฏิเสธการตอบตรงๆ อย่างสุภาพ"
                 }
                 
                 full_messages = [system_message] + [{"role": m["role"], "content": m["content"]} for m in st.session_state.messages]
 
+                # เพิ่ม temperature=0.3 เพื่อลดความเอ๋อและป้องกันโทเค็นภาษาอื่นหลุดมา
                 completion = client.chat.completions.create(
                     model="llama-3.3-70b-versatile",
-                    messages=full_messages
+                    messages=full_messages,
+                    temperature=0.3
                 )
                 response_text = completion.choices[0].message.content
                 st.markdown(response_text)
