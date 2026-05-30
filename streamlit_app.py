@@ -8,8 +8,10 @@ from groq import Groq
 # ==========================================
 # 1. การตั้งค่าหน้าจอและหน้าตา UI (Page Config & CSS)
 # ==========================================
+# กำหนดหน้าจอแบบ Wide และตั้งชื่อหัวข้อเว็บ
 st.set_page_config(page_title="ADISORN AI 3.0", page_icon="🔮", layout="wide")
 
+# ปรับแต่งสไตล์เพื่อความงามแบบมินิมอลและเป็นระเบียบ
 st.markdown("""
     <style>
     /* ปรับพื้นหลังหลักของเว็บ */
@@ -66,7 +68,7 @@ st.markdown("""
 # 2. ฟังก์ชันช่วยเหลือ (Helper Functions)
 # ==========================================
 def encode_image(image_file):
-    """ทำการแปลงไฟล์รูปภาพที่อัปโหลดให้อยู่ในรูปแบบ Base64"""
+    """ทำการแปลงไฟล์รูปภาพที่อัปโหลดให้อยู่ในรูปแบบ Base64 เพื่อส่งต่อให้ Vision Model ทำงาน"""
     return base64.b64encode(image_file.read()).decode('utf-8')
 
 def export_chat_history():
@@ -76,6 +78,7 @@ def export_chat_history():
     for msg in st.session_state.messages:
         role = "👤 คุณ (You)" if msg["role"] == "user" else "🤖 ADISORN AI"
         content = msg["content"]
+        # หากเนื้อหามีรูปภาพ ให้แยกข้อความออกแสดงผล
         if isinstance(content, list):
             content = content[0]["text"] + " [แนบไฟล์รูปภาพประกอบ]"
         chat_text += f"{role}:\n{content}\n\n{'-'*40}\n\n"
@@ -93,6 +96,8 @@ if "current_persona" not in st.session_state:
 if "GROQ_API_KEY" not in st.secrets:
     st.error("⚠️ ไม่พบรหัส GROQ_API_KEY ในระบบ Secrets กรุณาตั้งค่าก่อนใช้งาน")
     st.stop()
+
+# เชื่อมต่อ Groq Client
 client = Groq(api_key=st.secrets["GROQ_API_KEY"])
 
 # ตรวจสอบว่ามี Gemini API Key สำหรับโมเดลวิเคราะห์ภาพหรือไม่
@@ -246,13 +251,23 @@ with col_main:
                     
                     response = requests.post(url, json=payload)
                     response_json = response.json()
+                    
+                    # ตรวจสอบความถูกต้องของคำตอบจาก API (ดักจับ API Key Gemini ผิดพลาด)
+                    if "error" in response_json:
+                        err_msg = response_json["error"].get("message", "")
+                        if "api key" in err_msg.lower() or response.status_code == 400:
+                            st.error("❌ **รหัส GEMINI_API_KEY ของบอสไม่ถูกต้อง!** \n\nกรุณาตรวจสอบว่าคัดลอกคีย์จาก Google AI Studio มาครบถ้วน ไม่มีตัวอักษรเกินหรือเว้นวรรคในหน้า Secrets นะครับ")
+                        else:
+                            st.error(f"❌ เกิดข้อผิดพลาดจากระบบวิเคราะห์ภาพ: {err_msg}")
+                        st.stop()
+
                     response_text = response_json["candidates"][0]["content"]["parts"][0]["text"]
                     
                     st.markdown(f"<div class='ai-bubble'><b>🤖 ADISORN AI:</b><br>{response_text}</div><div class='clear'></div>", unsafe_allow_html=True)
                     st.session_state.messages.append({"role": "assistant", "content": response_text})
                     st.rerun()
                 except Exception as e:
-                    st.error(f"❌ เกิดข้อผิดพลาดในการเรียกใช้ระบบประมวลผลภาพ: {e}")
+                    st.error(f"❌ เกิดข้อผิดพลาดในการเชื่อมต่อระบบวิเคราะห์ภาพ: {e}")
         else:
             # ถ้าไม่มีรูปภาพ หรือยังไม่ได้ใส่คีย์วิเคราะห์ภาพของ Gemini ให้ใช้ Groq จัดการ
             st.session_state.messages.append({"role": "user", "content": user_input})
@@ -285,4 +300,9 @@ with col_main:
                     st.rerun()
                     
                 except Exception as e:
-                    st.error(f"❌ เกิดข้อผิดพลาดในการประมวลผลข้อความ: {e}")
+                    # ดักจับกรณี API Key ของ Groq ผิดพลาดในรูปแบบ 401 หรือ invalid_api_key
+                    err_str = str(e).lower()
+                    if "401" in err_str or "api_key" in err_str or "invalid" in err_str:
+                        st.error("❌ **รหัส GROQ_API_KEY ของบอสไม่ถูกต้อง!** \n\nกรุณาตรวจสอบหน้า **Secrets ของ Streamlit** ว่าคีย์คัดลอกมาจาก Groq Console ครบทุกตัวอักษร ไม่มีตัวอักษรขาดหายหรือเว้นวรรคเกินเข้ามานะครับบอส")
+                    else:
+                        st.error(f"❌ เกิดข้อผิดพลาดในการประมวลผลข้อความ: {e}")
