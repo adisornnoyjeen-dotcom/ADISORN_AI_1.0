@@ -67,7 +67,7 @@ st.markdown("""
 # 2. ฟังก์ชันช่วยเหลือ (Helper Functions)
 # ==========================================
 def encode_image(image_file):
-    """ทำการแปลงไฟล์รูปภาพที่อัปโหลดให้อยู่ในรูปแบบ Base64 เพื่อส่งต่อให้ Vision Model ทำงาน"""
+    """ทำการแปลงไฟล์รูปภาพที่อัปโหลดให้อยู่ในรูปแบบ Base64"""
     return base64.b64encode(image_file.read()).decode('utf-8')
 
 def export_chat_history():
@@ -77,9 +77,6 @@ def export_chat_history():
     for msg in st.session_state.messages:
         role = "👤 คุณ (You)" if msg["role"] == "user" else "🤖 ADISORN AI"
         content = msg["content"]
-        # หากเนื้อหามีรูปภาพ ให้แยกข้อความออกแสดงผล
-        if isinstance(content, list):
-            content = content[0]["text"] + " [แนบไฟล์รูปภาพประกอบ]"
         chat_text += f"{role}:\n{content}\n\n{'-'*40}\n\n"
     return chat_text
 
@@ -127,15 +124,7 @@ with st.sidebar:
     
     st.divider()
     
-    # 4.3 เครื่องมืออัปโหลดภาพประกอบการวิเคราะห์ (Vision Input)
-    st.markdown("<p class='sidebar-section'>👁️ ระบบวิเคราะห์รูปภาพ</p>", unsafe_allow_html=True)
-    uploaded_file = st.file_uploader("แนบรูปภาพอ้างอิง:", type=["jpg", "jpeg", "png"])
-    if uploaded_file:
-        st.image(uploaded_file, caption="รูปภาพที่เตรียมวิเคราะห์", use_column_width=True)
-        
-    st.divider()
-    
-    # 4.4 ฟังก์ชันจัดการเนื้อหา (Summarize & Export Tools)
+    # 4.3 เครื่องมือสรุปและดาวน์โหลดประวัติแชท
     st.markdown("<p class='sidebar-section'>📦 เครื่องมือจัดการข้อมูล</p>", unsafe_allow_html=True)
     if st.button("📝 สรุปเรื่องราวทั้งหมดในแชท", use_container_width=True):
         if len(st.session_state.messages) > 0:
@@ -156,7 +145,7 @@ with st.sidebar:
     
     st.divider()
     
-    # 4.5 ปุ่มคำถามยอดนิยม (Quick Prompts)
+    # 4.4 ปุ่มคำถามยอดนิยม (Quick Prompts)
     st.markdown("<p class='sidebar-section'>📌 เมนูคำถามด่วน</p>", unsafe_allow_html=True)
     if st.button("🧬 ถามเรื่องพริออน (Prion)", use_container_width=True):
         st.session_state.quick_prompt = "อธิบายเกี่ยวกับโปรตีนพริออน (Prion) และโรคที่เกี่ยวข้องแบบละเอียดเข้าใจง่าย"
@@ -180,19 +169,14 @@ with col_main:
     # วนลูปวาดกล่องแชททีละรายการตามประวัติ
     for msg in st.session_state.messages:
         if msg["role"] == "user":
-            content = msg["content"]
-            # ตรวจสอบรูปแบบกรณีเป็น List (มีข้อความพร้อมภาพ)
-            if isinstance(content, list):
-                st.markdown(f"<div class='user-bubble'>{content[0]['text']} <br><i>[📷 ส่งรูปภาพประกอบ]</i></div>", unsafe_allow_html=True)
-            else:
-                st.markdown(f"<div class='user-bubble'>{content}</div>", unsafe_allow_html=True)
+            st.markdown(f"<div class='user-bubble'>{msg['content']}</div>", unsafe_allow_html=True)
         else:
             st.markdown(f"<div class='ai-bubble'><b>🤖 ADISORN AI:</b><br>{msg['content']}</div>", unsafe_allow_html=True)
             
     st.markdown("<div class='clear'></div>", unsafe_allow_html=True)
 
     # ช่องรับข้อมูลข้อความ (Chat Input Bar)
-    user_input = st.chat_input("พิมพ์ถามเรื่องชีววิทยา เขียนโค้ด หรือส่งรูปทางซ้ายเพื่อวิเคราะห์...")
+    user_input = st.chat_input("พิมพ์ถามเรื่องชีววิทยา เขียนโค้ด หรือพูดคุยทั่วไปกับระบบได้เลย...")
     
     # ดักจับค่าจาก Quick Prompt / สรุปความ
     if "quick_prompt" in st.session_state:
@@ -202,20 +186,7 @@ with col_main:
     if user_input:
         # วาดข้อความของผู้ใช้ที่เพิ่งส่งบนหน้าจอทันที
         st.markdown(f"<div class='user-bubble'>{user_input}</div><div class='clear'></div>", unsafe_allow_html=True)
-        
-        image_url = None
-        message_content = user_input
-        
-        # หากใน Sidebar มีการแนบไฟล์ภาพ ให้ประมวลผลเป็น payload แบบ Multi-modal
-        if uploaded_file:
-            base64_image = encode_image(uploaded_file)
-            image_url = f"data:image/jpeg;base64,{base64_image}"
-            message_content = [
-                {"type": "text", "text": user_input},
-                {"type": "image_url", "image_url": {"url": image_url}}
-            ]
-            
-        st.session_state.messages.append({"role": "user", "content": message_content})
+        st.session_state.messages.append({"role": "user", "content": user_input})
         
         # เริ่มเชื่อมต่อกับ Groq API เพื่อหาคำตอบ
         with st.spinner("ADISORN AI กำลังประมวลผลคำตอบ..."):
@@ -225,9 +196,9 @@ with col_main:
                 
                 full_messages = [system_message] + st.session_state.messages
                 
-                # เรียกใช้โมเดล Vision ตัวใหม่ล่าสุด ที่มีประสิทธิภาพและใช้งานได้ถาวร
+                # เรียกใช้โมเดลล่าสุดที่มีประสิทธิภาพสูง รวดเร็ว และไม่มีการหมดอายุ
                 completion = client.chat.completions.create(
-                    model="llama-3.2-11b-vision-preview",
+                    model="llama-3.3-70b-specdec",
                     messages=full_messages,
                     temperature=temperature,
                     max_tokens=2048
