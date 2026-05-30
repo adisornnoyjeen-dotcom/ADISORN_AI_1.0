@@ -163,17 +163,48 @@ with st.sidebar:
         "ผู้ช่วยทั่วไป": "คุณคือ ADISORN AI 3.0 ผู้ช่วยอัจฉริยะ ตอบคำถามเป็นภาษาไทยอย่างเป็นมิตร มินิมอล",
         "นักชีววิทยา": "คุณคือ ศ.ดร.อดิศร ผู้เชี่ยวชาญด้านชีววิทยาและการแพทย์ระดับสูง ตอบด้วยข้อมูลเชิงลึกและศัพท์วิชาการ",
         "โปรแกรมเมอร์": "คุณคือ Senior Developer ชื่ออดิศร เชี่ยวชาญการเขียนโค้ด ตอบตรงประเด็นและให้ตัวอย่างโค้ดที่ถูกต้อง",
-        "นักการตลาด": "คุณคือ Marketing Guru ชื่ออดิศร เชี่ยวชาญด้านจิตวิทยาและการตลาด เสนอไอเดียสร้างสรรค์ที่แปลกใหม่"
+        "นักการตลาด": "คุณคือ Marketing Guru ชื่ออดิศร เชี่ยวชาญด้านจิตวิทยาและการตลาด เสนอไอเดียสร้างสรรค์ที่แปลกใหม่",
+        "ไกด์นำเที่ยว": "คุณคือไกด์นำเที่ยวท้องถิ่นที่รอบรู้ เชี่ยวชาญเรื่องสถานที่ท่องเที่ยวและอาหารอร่อย",
+        "เกมเมอร์": "คุณคือเกมเมอร์ตัวยง รู้ลึกรู้จริงเรื่องเกมทุกแนวและพร้อมป้ายยาเกมสนุกๆ ให้ผู้ใช้"
     }
     selected_persona = st.selectbox("เลือก Persona:", list(persona_options.keys()), label_visibility="collapsed")
     
     # 4.2 แถบเลื่อนปรับค่า Temperature
     st.markdown("<p class='sidebar-section'>🌡️ ระดับความสร้างสรรค์ของคำตอบ</p>", unsafe_allow_html=True)
-    temperature = st.slider("0 = แน่นวิชาการ, 1 = ตอบแบบสร้างสรรค์", min_value=0.0, max_value=1.0, value=0.3, step=0.1)
+    temperature = st.slider("0 = แน่นวิชาการ, 1 = ตอบแบบสร้างสรรค์", min_value=0.0, max_value=1.0, value=0.6, step=0.1)
     
     st.divider()
 
-    # 4.3 เครื่องมืออัปโหลดภาพประกอบการวิเคราะห์ (Vision Input)
+    # 4.3 หมวดแนะนำสิ่งต่างๆ (Smart Recommendations) - ฟีเจอร์ใหม่
+    st.markdown("<p class='sidebar-section'>✨ หมวดแนะนำสิ่งต่างๆ</p>", unsafe_allow_html=True)
+    with st.expander("คลิกเพื่อเลือกเรื่องที่อยากให้ AI แนะนำ", expanded=False):
+        if st.button("🗺️ แนะนำสถานที่ท่องเที่ยว", use_container_width=True):
+            st.session_state.quick_prompt = "ช่วยแนะนำสถานที่ท่องเที่ยวที่น่าสนใจในช่วงนี้ให้หน่อย ขอแบบมีจุดเด่นและกิจกรรมที่ห้ามพลาด"
+            st.rerun()
+        if st.button("🎮 แนะนำเกมน่าเล่น", use_container_width=True):
+            st.session_state.quick_prompt = "ช่วยแนะนำวิดีโอเกมหรือเกมมือถือที่สนุกและกำลังฮิตในช่วงนี้ พร้อมบอกจุดเด่นและแนวเกมให้หน่อย"
+            st.rerun()
+        if st.button("🍜 แนะนำเมนูอาหารอร่อยๆ", use_container_width=True):
+            st.session_state.quick_prompt = "ช่วยแนะนำเมนูอาหารเด็ดๆ พร้อมบอกรสชาติและวัตถุดิบคร่าวๆ เผื่อไปหาทานหรือทำกินเองหน่อย"
+            st.rerun()
+        if st.button("🍿 แนะนำหนัง / ซีรีส์", use_container_width=True):
+            st.session_state.quick_prompt = "ช่วยแนะนำหนังหรือซีรีส์สนุกๆ ที่ควรดูให้หน่อย ขอพลอตเรื่องคร่าวๆ และเหตุผลที่ควรดู"
+            st.rerun()
+        
+        st.divider()
+        st.markdown("**💡 หรือกรอกเรื่องที่อยากให้แนะนำเอง:**")
+        # ช่องกรอกแบบ Custom สำหรับขอคำแนะนำ
+        custom_topic = st.text_input("พิมพ์เรื่องที่ต้องการ (เช่น คาเฟ่, หนังสือ):", placeholder="เช่น หนังสือพัฒนาตัวเอง...")
+        if st.button("🔍 ค้นหาคำแนะนำ", use_container_width=True):
+            if custom_topic:
+                st.session_state.quick_prompt = f"ช่วยแนะนำเกี่ยวกับ '{custom_topic}' ให้หน่อย ขอแบบเจาะลึก น่าสนใจ และเป็นประโยชน์"
+                st.rerun()
+            else:
+                st.warning("กรุณาพิมพ์เรื่องที่ต้องการให้แนะนำก่อนครับ")
+
+    st.divider()
+
+    # 4.4 เครื่องมืออัปโหลดภาพประกอบการวิเคราะห์ (Vision Input)
     st.markdown("<p class='sidebar-section'>👁️ ระบบวิเคราะห์รูปภาพ (Gemini Inside)</p>", unsafe_allow_html=True)
     uploaded_file = st.file_uploader("แนบรูปภาพอ้างอิง:", type=["jpg", "jpeg", "png"])
     if uploaded_file:
@@ -183,7 +214,7 @@ with st.sidebar:
         
     st.divider()
     
-    # 4.4 ฟังก์ชันจัดการเนื้อหา (Summarize & Export Tools)
+    # 4.5 ฟังก์ชันจัดการเนื้อหา (Summarize & Export Tools)
     st.markdown("<p class='sidebar-section'>📦 เครื่องมือจัดการข้อมูล</p>", unsafe_allow_html=True)
     if st.button("📝 สรุปเรื่องราวทั้งหมดในแชท", use_container_width=True):
         if len(st.session_state.messages) > 0:
@@ -201,20 +232,6 @@ with st.sidebar:
             mime="text/plain",
             use_container_width=True
         )
-    
-    st.divider()
-    
-    # 4.5 ปุ่มคำถามยอดนิยม (Quick Prompts)
-    st.markdown("<p class='sidebar-section'>📌 เมนูคำถามด่วน</p>", unsafe_allow_html=True)
-    if st.button("🧬 ถามเรื่องพริออน (Prion)", use_container_width=True):
-        st.session_state.quick_prompt = "อธิบายเกี่ยวกับโปรตีนพริออน (Prion) และโรคที่เกี่ยวข้องแบบละเอียดเข้าใจง่าย"
-        st.rerun()
-    if st.button("💻 ช่วยเขียนโปรแกรม Python", use_container_width=True):
-        st.session_state.quick_prompt = "ช่วยเขียนโค้ดภาษา Python ดึงข้อมูลสภาพอากาศในปัจจุบันให้หน่อย"
-        st.rerun()
-    if st.button("📊 ร่างไอเดียเพิ่มยอดขาย", use_container_width=True):
-        st.session_state.quick_prompt = "ช่วยเสนอไอเดียการทำการตลาดออนไลน์ให้เข้าถึงวัยรุ่นยุคปัจจุบันหน่อย"
-        st.rerun()
 
 # ==========================================
 # 5. พื้นที่ส่วนแสดงบทสนทนาหลักกลางหน้าจอ (Centered Chat Area)
@@ -238,9 +255,9 @@ with col_main:
     st.markdown("<div class='clear'></div>", unsafe_allow_html=True)
 
     # ช่องรับข้อมูลข้อความ (Chat Input Bar)
-    user_input = st.chat_input("พิมพ์ถามเรื่องชีววิทยา เขียนโค้ด หรือส่งรูปทางซ้ายเพื่อวิเคราะห์...")
+    user_input = st.chat_input("พิมพ์ถามเรื่องชีววิทยา เขียนโค้ด ขอคำแนะนำ หรือส่งรูปทางซ้ายเพื่อวิเคราะห์...")
     
-    # ดักจับค่าจาก Quick Prompt / สรุปความ
+    # ดักจับค่าจาก Quick Prompt / สรุปความ / หมวดแนะนำ
     if "quick_prompt" in st.session_state:
         user_input = st.session_state.quick_prompt
         del st.session_state.quick_prompt
@@ -312,7 +329,7 @@ with col_main:
             # ถ้าไม่มีรูปภาพ หรือยังไม่ได้ใส่คีย์วิเคราะห์ภาพของ Gemini ให้ใช้ Groq จัดการ
             st.session_state.messages.append({"role": "user", "content": user_input})
             
-            with st.spinner("ADISORN AI กำลังประมวลผลคำตอบ..."):
+            with st.spinner("ADISORN AI กำลังรวบรวมข้อมูลคำตอบให้คุณ..."):
                 try:
                     system_instruction = persona_options[selected_persona]
                     system_message = {"role": "system", "content": system_instruction}
@@ -346,4 +363,3 @@ with col_main:
                         st.error("❌ **รหัส GROQ_API_KEY ของบอสไม่ถูกต้อง!** \n\nกรุณาตรวจสอบหน้า **Secrets ของ Streamlit** ว่าคีย์คัดลอกมาจาก Groq Console ครบทุกตัวอักษร ไม่มีตัวอักษรขาดหายหรือเว้นวรรคเกินเข้ามานะครับบอส")
                     else:
                         st.error(f"❌ เกิดข้อผิดพลาดในการประมวลผลข้อความ: {e}")
-                        
