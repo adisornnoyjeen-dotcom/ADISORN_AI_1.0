@@ -190,6 +190,23 @@ with st.sidebar:
         if st.button("🍿 แนะนำหนัง / ซีรีส์", use_container_width=True):
             st.session_state.quick_prompt = "ช่วยแนะนำหนังหรือซีรีส์สนุกๆ ที่ควรดูให้หน่อย ขอพลอตเรื่องคร่าวๆ และเหตุผลที่ควรดู"
             st.rerun()
+            
+        # เพิ่มหมวดอื่นๆ ตามคำขอ
+        if st.button("📚 แนะนำหนังสือน่าอ่าน", use_container_width=True):
+            st.session_state.quick_prompt = "ช่วยแนะนำหนังสือน่าอ่าน ทั้งหมวดพัฒนาตัวเอง หรือนิยายสนุกๆ พร้อมสรุปข้อคิดหรือความน่าสนใจให้หน่อย"
+            st.rerun()
+        if st.button("🎧 แนะนำเพลง / พอดแคสต์", use_container_width=True):
+            st.session_state.quick_prompt = "ช่วยแนะนำเพลงฮิต หรือพอดแคสต์ (Podcast) ดีๆ ที่ฟังแล้วได้แรงบันดาลใจหรือผ่อนคลายให้หน่อย"
+            st.rerun()
+        if st.button("💪 แนะนำทริคดูแลสุขภาพ", use_container_width=True):
+            st.session_state.quick_prompt = "ช่วยแนะนำเคล็ดลับการดูแลสุขภาพ การออกกำลังกายง่ายๆ หรือการกินอาหารที่มีประโยชน์สำหรับคนยุคนี้หน่อย"
+            st.rerun()
+        if st.button("💻 แนะนำเครื่องมือ AI / แอป", use_container_width=True):
+            st.session_state.quick_prompt = "ช่วยแนะนำแอปพลิเคชันหรือเครื่องมือ AI เจ๋งๆ ที่ช่วยให้การทำงานหรือชีวิตประจำวันง่ายขึ้นหน่อย"
+            st.rerun()
+        if st.button("🎁 แนะนำไอเดียของขวัญ", use_container_width=True):
+            st.session_state.quick_prompt = "ช่วยคิดไอเดียซื้อของขวัญที่ดูดีและใช้งานได้จริง สำหรับให้เพื่อน แฟน หรือผู้ใหญ่ในโอกาสพิเศษหน่อย"
+            st.rerun()
         
         st.divider()
         st.markdown("**💡 หรือกรอกเรื่องที่อยากให้แนะนำเอง:**")
