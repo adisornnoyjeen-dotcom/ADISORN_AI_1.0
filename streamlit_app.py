@@ -37,3 +37,14 @@ if user_input := st.chat_input("พิมพ์ข้อความคุยก
                 st.session_state.messages.append({"role": "assistant", "content": response_text})
             except Exception as e:
                 st.error(f"เกิดข้อผิดพลาด: {e}")
+                # ส่วนสุดท้าย: ประมวลผลและแสดงผล
+                completion = client.chat.completions.create(
+                    model="llama-3.3-70b-versatile",
+                    messages=full_messages,
+                    temperature=0.3
+                )
+                response_text = completion.choices[0].message.content
+                st.markdown(response_text)
+                st.session_state.messages.append({"role": "assistant", "content": response_text})
+            except Exception as e:
+                st.error(f"เกิดข้อผิดพลาด: {e}")
