@@ -196,9 +196,9 @@ with col_main:
                 
                 full_messages = [system_message] + st.session_state.messages
                 
-                # เรียกใช้โมเดลล่าสุดที่มีประสิทธิภาพสูง รวดเร็ว และไม่มีการหมดอายุ
+                # เปลี่ยนไปใช้โมเดล Llama 3.3 70B รุ่นหลักอย่างเป็นทางการ เพื่อความคงทนและเสถียรภาพถาวร
                 completion = client.chat.completions.create(
-                    model="llama-3.3-70b-specdec",
+                    model="llama-3.3-70b-versatile",
                     messages=full_messages,
                     temperature=temperature,
                     max_tokens=2048
