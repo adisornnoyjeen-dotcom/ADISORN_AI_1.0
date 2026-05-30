@@ -1,16 +1,15 @@
 import streamlit as st
 import base64
 import json
+import requests
 from datetime import datetime
 from groq import Groq
 
 # ==========================================
 # 1. การตั้งค่าหน้าจอและหน้าตา UI (Page Config & CSS)
 # ==========================================
-# กำหนดหน้าจอแบบ Wide และตั้งชื่อหัวข้อเว็บ
 st.set_page_config(page_title="ADISORN AI 3.0", page_icon="🔮", layout="wide")
 
-# ปรับแต่งสไตล์เพื่อความงามแบบมินิมอลและเป็นระเบียบ
 st.markdown("""
     <style>
     /* ปรับพื้นหลังหลักของเว็บ */
@@ -67,7 +66,7 @@ st.markdown("""
 # 2. ฟังก์ชันช่วยเหลือ (Helper Functions)
 # ==========================================
 def encode_image(image_file):
-    """ทำการแปลงไฟล์รูปภาพที่อัปโหลดให้อยู่ในรูปแบบ Base64 เพื่อส่งต่อให้ Vision Model ทำงาน"""
+    """ทำการแปลงไฟล์รูปภาพที่อัปโหลดให้อยู่ในรูปแบบ Base64"""
     return base64.b64encode(image_file.read()).decode('utf-8')
 
 def export_chat_history():
@@ -77,7 +76,6 @@ def export_chat_history():
     for msg in st.session_state.messages:
         role = "👤 คุณ (You)" if msg["role"] == "user" else "🤖 ADISORN AI"
         content = msg["content"]
-        # หากเนื้อหามีรูปภาพ ให้แยกข้อความออกแสดงผล
         if isinstance(content, list):
             content = content[0]["text"] + " [แนบไฟล์รูปภาพประกอบ]"
         chat_text += f"{role}:\n{content}\n\n{'-'*40}\n\n"
@@ -91,11 +89,14 @@ if "messages" not in st.session_state:
 if "current_persona" not in st.session_state:
     st.session_state.current_persona = "ผู้ช่วยทั่วไป"
 
-# เรียกดู Groq API Key จากระบบ Secrets ของเว็บบอร์ด
+# เรียกดู Groq API Key จากระบบ Secrets
 if "GROQ_API_KEY" not in st.secrets:
     st.error("⚠️ ไม่พบรหัส GROQ_API_KEY ในระบบ Secrets กรุณาตั้งค่าก่อนใช้งาน")
     st.stop()
 client = Groq(api_key=st.secrets["GROQ_API_KEY"])
+
+# ตรวจสอบว่ามี Gemini API Key สำหรับโมเดลวิเคราะห์ภาพหรือไม่
+gemini_key = st.secrets.get("GEMINI_API_KEY", "")
 
 # ==========================================
 # 4. เมนูจัดการด้านซ้ายมือ (Unified Sidebar Panel)
@@ -127,11 +128,13 @@ with st.sidebar:
     
     st.divider()
 
-    # 4.3 เครื่องมืออัปโหลดภาพประกอบการวิเคราะห์ (Vision Input) - ดึงกลับมาแล้วจ้าบอส!
-    st.markdown("<p class='sidebar-section'>👁️ ระบบวิเคราะห์รูปภาพ</p>", unsafe_allow_html=True)
+    # 4.3 เครื่องมืออัปโหลดภาพประกอบการวิเคราะห์ (Vision Input)
+    st.markdown("<p class='sidebar-section'>👁️ ระบบวิเคราะห์รูปภาพ (Gemini Inside)</p>", unsafe_allow_html=True)
     uploaded_file = st.file_uploader("แนบรูปภาพอ้างอิง:", type=["jpg", "jpeg", "png"])
     if uploaded_file:
         st.image(uploaded_file, caption="รูปภาพที่เตรียมวิเคราะห์", use_column_width=True)
+        if not gemini_key:
+            st.warning("💡 ตรวจพบการแนบรูปภาพ! กรุณาเพิ่มคีย์ `GEMINI_API_KEY` ในหน้า Secrets เพื่อปลดล็อกระบบวิเคราะห์รูปภาพฟรี")
         
     st.divider()
     
@@ -171,7 +174,6 @@ with st.sidebar:
 # ==========================================
 # 5. พื้นที่ส่วนแสดงบทสนทนาหลักกลางหน้าจอ (Centered Chat Area)
 # ==========================================
-# เว้นระยะด้านข้างเพื่อให้กล่องแชทอยู่บริเวณกึ่งกลางพอดีสายตา ไม่บานกว้างไป
 _, col_main, _ = st.columns([1, 4, 1])
 
 with col_main:
@@ -181,7 +183,6 @@ with col_main:
     for msg in st.session_state.messages:
         if msg["role"] == "user":
             content = msg["content"]
-            # ตรวจสอบรูปแบบกรณีเป็น List (มีข้อความพร้อมภาพ)
             if isinstance(content, list):
                 st.markdown(f"<div class='user-bubble'>{content[0]['text']} <br><i>[📷 ส่งรูปภาพประกอบ]</i></div>", unsafe_allow_html=True)
             else:
@@ -200,50 +201,88 @@ with col_main:
         del st.session_state.quick_prompt
 
     if user_input:
-        # วาดข้อความของผู้ใช้ที่เพิ่งส่งบนหน้าจอทันที
-        image_url = None
-        message_content = user_input
-        selected_model = "llama-3.3-70b-versatile" # โมเดลค่าเริ่มต้นสำหรับพิมพ์คุย
+        # วาดข้อความผู้ใช้ทันที
+        st.markdown(f"<div class='user-bubble'>{user_input}</div><div class='clear'></div>", unsafe_allow_html=True)
         
-        # หากใน Sidebar มีการแนบไฟล์ภาพ ให้เปลี่ยนไปใช้โมเดลวิเคราะห์ภาพอัตโนมัติ
-        if uploaded_file:
+        # คัดเลือกระบบโมเดลตามไฟล์รูปภาพ
+        if uploaded_file and gemini_key:
+            # ใช้ระบบวิเคราะห์ภาพระดับโลกของ Gemini 2.5 Flash
             base64_image = encode_image(uploaded_file)
-            image_url = f"data:image/jpeg;base64,{base64_image}"
-            message_content = [
-                {"type": "text", "text": user_input},
-                {"type": "image_url", "image_url": {"url": image_url}}
-            ]
-            selected_model = "llama-3.2-11b-vision" # สลับมาใช้โมเดล Vision รุ่นมาตรฐาน
-            st.markdown(f"<div class='user-bubble'>{user_input} <br><i>[📷 ส่งรูปภาพประกอบ]</i></div><div class='clear'></div>", unsafe_allow_html=True)
-        else:
-            st.markdown(f"<div class='user-bubble'>{user_input}</div><div class='clear'></div>", unsafe_allow_html=True)
+            st.session_state.messages.append({
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": user_input},
+                    {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"}}
+                ]
+            })
             
-        st.session_state.messages.append({"role": "user", "content": message_content})
-        
-        # เริ่มเชื่อมต่อกับ Groq API เพื่อหาคำตอบ
-        with st.spinner("ADISORN AI กำลังประมวลผลคำตอบ..."):
-            try:
-                system_instruction = persona_options[selected_persona]
-                system_message = {"role": "system", "content": system_instruction}
-                
-                full_messages = [system_message] + st.session_state.messages
-                
-                # เรียกใช้โมเดลตามประเภทข้อมูลที่ส่งไป
-                completion = client.chat.completions.create(
-                    model=selected_model,
-                    messages=full_messages,
-                    temperature=temperature,
-                    max_tokens=2048
-                )
-                
-                response_text = completion.choices[0].message.content
-                
-                # แสดงผลและบันทึกข้อมูล
-                st.markdown(f"<div class='ai-bubble'><b>🤖 ADISORN AI:</b><br>{response_text}</div><div class='clear'></div>", unsafe_allow_html=True)
-                st.session_state.messages.append({"role": "assistant", "content": response_text})
-                
-                # สั่งรีรันแอปเพื่อจัดเรียงกล่องสนทนาให้สวยงามและรีเซ็ตค่า input
-                st.rerun()
-                
-            except Exception as e:
-                st.error(f"❌ เกิดข้อผิดพลาดในการรับข้อมูล: {e}")
+            with st.spinner("ADISORN AI (Gemini Vision) กำลังสแกนภาพและประมวลผล..."):
+                try:
+                    system_instruction = persona_options[selected_persona]
+                    
+                    # เรียกใช้ Gemini REST API โดยตรงแบบเสถียรที่สุด
+                    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={gemini_key}"
+                    payload = {
+                        "contents": [{
+                            "role": "user",
+                            "parts": [
+                                {"text": user_input},
+                                {
+                                    "inlineData": {
+                                        "mimeType": uploaded_file.type,
+                                        "data": base64_image
+                                    }
+                                }
+                            ]
+                        }],
+                        "systemInstruction": {
+                            "parts": [{"text": system_instruction}]
+                        },
+                        "generationConfig": {
+                            "temperature": temperature,
+                            "maxOutputTokens": 2048
+                        }
+                    }
+                    
+                    response = requests.post(url, json=payload)
+                    response_json = response.json()
+                    response_text = response_json["candidates"][0]["content"]["parts"][0]["text"]
+                    
+                    st.markdown(f"<div class='ai-bubble'><b>🤖 ADISORN AI:</b><br>{response_text}</div><div class='clear'></div>", unsafe_allow_html=True)
+                    st.session_state.messages.append({"role": "assistant", "content": response_text})
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"❌ เกิดข้อผิดพลาดในการเรียกใช้ระบบประมวลผลภาพ: {e}")
+        else:
+            # ถ้าไม่มีรูปภาพ หรือยังไม่ได้ใส่คีย์วิเคราะห์ภาพของ Gemini ให้ใช้ Groq จัดการ
+            st.session_state.messages.append({"role": "user", "content": user_input})
+            
+            with st.spinner("ADISORN AI กำลังประมวลผลคำตอบ..."):
+                try:
+                    system_instruction = persona_options[selected_persona]
+                    system_message = {"role": "system", "content": system_instruction}
+                    
+                    # แปลงประวัติแชทให้เข้ากับฟอร์แมต Groq
+                    formatted_messages = [system_message]
+                    for m in st.session_state.messages:
+                        # กรองเอาเฉพาะข้อมูลตัวอักษรเพื่อส่งไปที่โมเดลข้อความล้วน
+                        if isinstance(m["content"], list):
+                            formatted_messages.append({"role": m["role"], "content": m["content"][0]["text"]})
+                        else:
+                            formatted_messages.append({"role": m["role"], "content": m["content"]})
+                    
+                    # เรียกโมเดล Groq Llama 3.3 70B รุ่นเสถียรที่สุดในการสนทนาธรรมดา
+                    completion = client.chat.completions.create(
+                        model="llama-3.3-70b-versatile",
+                        messages=formatted_messages,
+                        temperature=temperature,
+                        max_tokens=2048
+                    )
+                    
+                    response_text = completion.choices[0].message.content
+                    st.markdown(f"<div class='ai-bubble'><b>🤖 ADISORN AI:</b><br>{response_text}</div><div class='clear'></div>", unsafe_allow_html=True)
+                    st.session_state.messages.append({"role": "assistant", "content": response_text})
+                    st.rerun()
+                    
+                except Exception as e:
+                    st.error(f"❌ เกิดข้อผิดพลาดในการประมวลผลข้อความ: {e}")
