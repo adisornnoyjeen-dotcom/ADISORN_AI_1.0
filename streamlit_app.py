@@ -11,7 +11,7 @@ from groq import Groq
 # กำหนดหน้าจอแบบ Wide และตั้งชื่อหัวข้อเว็บ
 st.set_page_config(page_title="ADISORN AI 3.0", page_icon="🔮", layout="wide")
 
-# ปรับแต่งสไตล์เพื่อความงามแบบมินิมอลและเป็นระเบียบ
+# ปรับแต่งสไตล์เพื่อความงามแบบมินิมอลและระบบความปลอดภัยป้องกันการก๊อปปี้โค้ด
 st.markdown("""
     <style>
     /* ปรับพื้นหลังหลักของเว็บ */
@@ -61,7 +61,47 @@ st.markdown("""
     
     /* เคลียร์ Float ของ CSS */
     .clear { clear: both; }
+
+    /* ==========================================
+       ระบบความปลอดภัย: ป้องกันการก๊อปปี้และซ่อนเมนู
+       ========================================== */
+    /* 1. ซ่อนปุ่มเมนูขวาบน (Hamburger Menu) และปุ่ม Deploy ของ Streamlit */
+    #MainMenu {visibility: hidden;}
+    header {visibility: hidden;}
+    footer {visibility: hidden;}
+    div[data-testid="stDecoration"] {display: none;}
+    
+    /* 2. บล็อกการลากคลุมดำตัวอักษรเพื่อคัดลอก (Disable Text Selection) */
+    body, .stApp, .user-bubble, .ai-bubble, p, span, div {
+        -webkit-touch-callout: none; /* iOS Safari */
+        -webkit-user-select: none;   /* Safari */
+        -khtml-user-select: none;     /* Konqueror HTML */
+        -moz-user-select: none;       /* Firefox */
+        -ms-user-select: none;        /* Internet Explorer/Edge */
+        user-select: none;            /* Non-prefixed version, currently supported by Chrome and Opera */
+    }
     </style>
+    
+    <script>
+    /* 3. บล็อกการคลิกขวาป้องกันการกด Inspect Element / View Source ด้วย JavaScript */
+    document.addEventListener('contextmenu', event => event.preventDefault());
+    
+    /* 4. บล็อกปุ่มลัดแป้นพิมพ์ F12, Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+U */
+    document.onkeydown = function(e) {
+        if (e.keyCode == 123) { // F12
+            return false;
+        }
+        if (e.ctrlKey && e.shiftKey && e.keyCode == 'I'.charCodeAt(0)) { // Ctrl+Shift+I
+            return false;
+        }
+        if (e.ctrlKey && e.shiftKey && e.keyCode == 'J'.charCodeAt(0)) { // Ctrl+Shift+J
+            return false;
+        }
+        if (e.ctrlKey && e.keyCode == 'U'.charCodeAt(0)) { // Ctrl+U
+            return false;
+        }
+    };
+    </script>
 """, unsafe_allow_html=True)
 
 # ==========================================
@@ -306,3 +346,4 @@ with col_main:
                         st.error("❌ **รหัส GROQ_API_KEY ของบอสไม่ถูกต้อง!** \n\nกรุณาตรวจสอบหน้า **Secrets ของ Streamlit** ว่าคีย์คัดลอกมาจาก Groq Console ครบทุกตัวอักษร ไม่มีตัวอักษรขาดหายหรือเว้นวรรคเกินเข้ามานะครับบอส")
                     else:
                         st.error(f"❌ เกิดข้อผิดพลาดในการประมวลผลข้อความ: {e}")
+                        
