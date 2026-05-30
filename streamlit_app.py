@@ -14,6 +14,12 @@ st.markdown("""
     /* ปรับแต่งพื้นหลังและฟอนต์ */
     .stApp { background-color: #f4f6f9; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
     
+    /* ปรับแต่งความกว้างและสไตล์ของ Sidebar */
+    section[data-testid="stSidebar"] {
+        background-color: #ffffff !important;
+        border-right: 1px solid #e5e7eb;
+    }
+    
     /* กล่องข้อความของผู้ใช้ (User) */
     .user-bubble {
         background-color: #4F46E5; color: white; padding: 12px 18px; 
@@ -29,10 +35,12 @@ st.markdown("""
         border: 1px solid #e5e7eb;
     }
     
-    /* กล่อง Tools ด้านขวา */
-    .tool-card {
-        background-color: #ffffff; padding: 20px; border-radius: 15px;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.05); border: 1px solid #f0f0f0; margin-bottom: 15px;
+    /* ตัวแบ่งเซกชันใน Sidebar */
+    .sidebar-section {
+        font-weight: bold;
+        color: #4F46E5;
+        margin-top: 15px;
+        margin-bottom: 5px;
     }
     
     /* ล้าง float เมื่อจบแชท */
@@ -54,7 +62,6 @@ def export_chat_history():
     for msg in st.session_state.messages:
         role = "👤 You" if msg["role"] == "user" else "🤖 ADISORN AI"
         content = msg["content"]
-        # ถ้าข้อความเป็น list (มีรูปภาพ) ให้ดึงเฉพาะ text มาแสดง
         if isinstance(content, list):
             content = content[0]["text"] + " [แนบรูปภาพ]"
         chat_text += f"{role}:\n{content}\n\n{'-'*40}\n\n"
@@ -75,88 +82,89 @@ if "GROQ_API_KEY" not in st.secrets:
 client = Groq(api_key=st.secrets["GROQ_API_KEY"])
 
 # ==========================================
-# 4. โครงสร้าง Layout (3 คอลัมน์)
+# 4. เมนูฝั่งซ้ายทั้งหมด (Unified Sidebar Control Panel)
 # ==========================================
-# ใช้ Sidebar เป็นเมนูซ้ายสุด และแบ่งจอหลักเป็น 2 ส่วน (แชท 70% | เครื่องมือ 30%)
-st.sidebar.title("🔮 ADISORN 3.0")
-st.sidebar.caption("Ultimate AI Dashboard")
-
 with st.sidebar:
+    st.title("🔮 ADISORN 3.0")
+    st.caption("Ultimate AI Dashboard")
+    
     if st.button("➕ สร้างแชทใหม่ (New Chat)", use_container_width=True):
         st.session_state.messages = []
         st.rerun()
     
     st.divider()
-    st.write("📌 **เมนูลัด (Quick Prompts)**")
-    if st.button("🧬 อธิบายเรื่องพริออน (Prion)"):
-        st.session_state.quick_prompt = "อธิบายเรื่องโปรตีนพริออนให้เข้าใจง่ายๆ หน่อย"
-    if st.button("💻 ช่วยเขียนโค้ด Python"):
-        st.session_state.quick_prompt = "เขียนโค้ด Python สำหรับทำกราฟแท่งแบบง่ายๆ"
-    if st.button("📊 ร่างแผนการตลาด"):
-        st.session_state.quick_prompt = "ช่วยคิดแผนโปรโมทเพจให้หน่อย เอาแบบคนแชร์เยอะๆ"
-
-col_main, col_tools = st.columns([2.5, 1], gap="large")
-
-# ==========================================
-# 5. คอลัมน์ขวา: แผงควบคุมและเครื่องมือ (Tools Column)
-# ==========================================
-with col_tools:
-    st.markdown("<div class='tool-card'>", unsafe_allow_html=True)
-    st.write("### 🛠️ AI Settings")
     
-    # 5.1 ระบบ Persona
+    # 4.1 ระบบปรับแต่งบทบาท (AI Persona Settings)
+    st.markdown("<p class='sidebar-section'>🎭 ปรับแต่งบทบาท AI</p>", unsafe_allow_html=True)
     persona_options = {
         "ผู้ช่วยทั่วไป": "คุณคือ ADISORN AI 3.0 ผู้ช่วยอัจฉริยะ ตอบคำถามเป็นภาษาไทยอย่างเป็นมิตร",
         "นักชีววิทยา": "คุณคือ ศ.ดร.อดิศร ผู้เชี่ยวชาญด้านชีววิทยา ตอบด้วยข้อมูลเชิงลึกและศัพท์วิชาการ",
         "โปรแกรมเมอร์": "คุณคือ Senior Developer ชื่ออดิศร เชี่ยวชาญการเขียนโค้ด ตอบสั้นๆ พร้อมโค้ดตัวอย่าง",
         "นักการตลาด": "คุณคือ Marketing Guru ชื่ออดิศร เชี่ยวชาญการสร้างแบรนด์ เน้นตอบไอเดียที่แปลกใหม่"
     }
-    selected_persona = st.selectbox("🎭 เลือกบทบาท AI:", list(persona_options.keys()))
+    selected_persona = st.selectbox("เลือก Persona ของระบบ:", list(persona_options.keys()), label_visibility="collapsed")
     
-    # 5.2 ปรับ Temperature
-    st.write("🌡️ **ความสร้างสรรค์**")
+    # 4.2 ปรับระดับความสร้างสรรค์ (Temperature Setting)
+    st.markdown("<p class='sidebar-section'>🌡️ ความสร้างสรรค์ของคำตอบ</p>", unsafe_allow_html=True)
     temperature = st.slider("0 = เป๊ะวิชาการ, 1 = มโนเก่ง", min_value=0.0, max_value=1.0, value=0.3, step=0.1)
     
     st.divider()
     
-    # 5.3 อัปโหลดรูปภาพ (Vision)
-    st.write("👁️ **ระบบวิเคราะห์ภาพ**")
-    uploaded_file = st.file_uploader("แนบรูปภาพ (JPG, PNG)", type=["jpg", "jpeg", "png"])
+    # 4.3 อัปโหลดรูปภาพเพื่อใช้วิเคราะห์ (Vision Input)
+    st.markdown("<p class='sidebar-section'>👁️ ระบบวิเคราะห์รูปภาพ</p>", unsafe_allow_html=True)
+    uploaded_file = st.file_uploader("แนบไฟล์ JPG หรือ PNG:", type=["jpg", "jpeg", "png"])
     if uploaded_file:
-        st.image(uploaded_file, caption="พร้อมวิเคราะห์", use_column_width=True)
+        st.image(uploaded_file, caption="รูปภาพปัจจุบันที่แนบอยู่", use_column_width=True)
         
     st.divider()
     
-    # 5.4 ฟีเจอร์เสริม (Summarize & Export)
-    st.write("📦 **จัดการแชท**")
-    if st.button("📝 สรุปแชททั้งหมด", use_container_width=True):
+    # 4.4 การจัดการประวัติแชท (Chat Utilities)
+    st.markdown("<p class='sidebar-section'>📦 จัดการข้อมูลแชท</p>", unsafe_allow_html=True)
+    if st.button("📝 สรุปบทสนทนาทั้งหมด", use_container_width=True):
         if len(st.session_state.messages) > 0:
             st.session_state.quick_prompt = "สรุปบทสนทนาที่เราคุยกันมาทั้งหมดให้สั้นกระชับเป็นข้อๆ"
+            st.rerun()
         else:
-            st.warning("ยังไม่มีบทสนทนาให้สรุปครับ")
+            st.warning("ยังไม่มีข้อความให้สรุปครับ")
             
     if len(st.session_state.messages) > 0:
         chat_data = export_chat_history()
         st.download_button(
-            label="💾 ดาวน์โหลดประวัติแชท (.txt)",
+            label="💾 ดาวน์โหลดแชทเก็บไว้ (.txt)",
             data=chat_data,
             file_name=f"Adisorn_AI_Chat_{datetime.now().strftime('%Y%m%d')}.txt",
             mime="text/plain",
             use_container_width=True
         )
-    st.markdown("</div>", unsafe_allow_html=True)
+    
+    st.divider()
+    
+    # 4.5 เมนูลัดในการถามคำถาม (Quick Prompts)
+    st.markdown("<p class='sidebar-section'>📌 คำถามด่วนที่ใช้บ่อย</p>", unsafe_allow_html=True)
+    if st.button("🧬 อธิบายเรื่องพริออน (Prion)", use_container_width=True):
+        st.session_state.quick_prompt = "อธิบายเรื่องโปรตีนพริออนให้เข้าใจง่ายๆ หน่อย"
+        st.rerun()
+    if st.button("💻 ช่วยเขียนโค้ด Python", use_container_width=True):
+        st.session_state.quick_prompt = "เขียนโค้ด Python สำหรับทำกราฟแท่งแบบง่ายๆ"
+        st.rerun()
+    if st.button("📊 ร่างแผนการตลาด", use_container_width=True):
+        st.session_state.quick_prompt = "ช่วยคิดแผนโปรโมทเพจให้หน่อย เอาแบบคนแชร์เยอะๆ"
+        st.rerun()
 
 # ==========================================
-# 6. คอลัมน์หลัก: หน้าจอแชท (Main Chat Area)
+# 5. หน้าจอแชทหลัก (Centered Chat Area)
 # ==========================================
+# จัดหน้าหลักให้อยู่กึ่งกลาง ไม่กว้างจนเกินไปเพื่อความสบายตาในการอ่านแชท
+_, col_main, _ = st.columns([1, 4, 1])
+
 with col_main:
-    st.write("### 💬 บทสนทนา")
+    st.write("### 💬 บทสนทนาของ ADISORN AI")
     
-    # แสดงประวัติแชทด้วย CSS ที่กำหนดไว้
+    # แสดงประวัติแชททั้งหมด
     for msg in st.session_state.messages:
         if msg["role"] == "user":
             content = msg["content"]
-            if isinstance(content, list): # กรณีมีรูปภาพ
+            if isinstance(content, list): # กรณีมีการแนบภาพ
                 st.markdown(f"<div class='user-bubble'>{content[0]['text']} <br><i>[📷 ส่งรูปภาพ]</i></div>", unsafe_allow_html=True)
             else:
                 st.markdown(f"<div class='user-bubble'>{content}</div>", unsafe_allow_html=True)
@@ -165,59 +173,54 @@ with col_main:
             
     st.markdown("<div class='clear'></div>", unsafe_allow_html=True)
 
-    # จัดการ Input จากผู้ใช้ (ทั้งจากการพิมพ์และ Quick Prompts)
-    user_input = st.chat_input("พิมพ์ข้อความ หรือแนบรูปภาพทางขวาแล้วพิมพ์ถาม...")
+    # จัดการการพิมพ์ส่งข้อความ
+    user_input = st.chat_input("พิมพ์ข้อความ หรือส่งภาพผ่านเมนูด้านซ้ายเพื่อเริ่มวิเคราะห์...")
     
-    # ถ้ามีการกด Quick Prompt ให้เอาค่านั้นมาใช้แทนการพิมพ์
+    # กรณีเลือกใช้งานจาก Quick Prompts/Summarize
     if "quick_prompt" in st.session_state:
         user_input = st.session_state.quick_prompt
         del st.session_state.quick_prompt
 
     if user_input:
-        # แสดงข้อความผู้ใช้
+        # แสดงข้อความฝั่งผู้ใช้ทันที
         st.markdown(f"<div class='user-bubble'>{user_input}</div><div class='clear'></div>", unsafe_allow_html=True)
         
-        # เตรียมข้อมูลสำหรับส่งให้ Groq
         image_url = None
         message_content = user_input
         
+        # แนบรูปภาพเข้าระบบประมวลผล (หากมีการเลือกรูปภาพไว้ใน Sidebar)
         if uploaded_file:
             base64_image = encode_image(uploaded_file)
             image_url = f"data:image/jpeg;base64,{base64_image}"
-            # จัดรูปแบบ payload สำหรับ Vision Model
             message_content = [
                 {"type": "text", "text": user_input},
                 {"type": "image_url", "image_url": {"url": image_url}}
             ]
             
-        # บันทึกประวัติฝั่งผู้ใช้
         st.session_state.messages.append({"role": "user", "content": message_content})
         
-        # ส่วนเรียก AI ประมวลผล
-        with st.spinner("AI กำลังประมวลผล..."):
+        # ส่งคำร้องขอไปยังเซิร์ฟเวอร์ Groq
+        with st.spinner("AI กำลังวิเคราะห์ข้อมูล..."):
             try:
-                # ดึง Persona ที่เลือกมาใช้
                 system_instruction = persona_options[selected_persona]
                 system_message = {"role": "system", "content": system_instruction}
                 
-                # ประกอบร่างข้อความทั้งหมด
                 full_messages = [system_message] + st.session_state.messages
                 
-                # ยิง API ไปที่ Groq (ใช้โมเดล Vision เพื่อรองรับทั้งภาพและข้อความ)
                 completion = client.chat.completions.create(
                     model="llama-3.2-90b-vision-preview",
                     messages=full_messages,
                     temperature=temperature,
-                    max_tokens=2048 # กำหนดความยาวสูงสุดของคำตอบ
+                    max_tokens=2048
                 )
                 
                 response_text = completion.choices[0].message.content
                 
-                # แสดงคำตอบและบันทึก
+                # แสดงผลคำตอบ
                 st.markdown(f"<div class='ai-bubble'><b>🤖 ADISORN AI:</b><br>{response_text}</div><div class='clear'></div>", unsafe_allow_html=True)
                 st.session_state.messages.append({"role": "assistant", "content": response_text})
                 
-                # สั่งรันหน้าจอใหม่เพื่อเคลียร์ช่อง Input และอัปเดต UI
+                # ทำการรีโหลดสถานะหน้าจอเพื่ออัปเดตแชทบับเบิ้ล
                 st.rerun()
                 
             except Exception as e:
